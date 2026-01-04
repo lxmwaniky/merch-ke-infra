@@ -1,0 +1,13 @@
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+
+# Variables files (Contains your Project ID/Secrets)
+*.tfvars
+*.tfvars.json
