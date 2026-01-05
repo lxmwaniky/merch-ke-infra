@@ -27,12 +27,12 @@ A modular Terraform configuration that automates the deployment of:
 
 ### Key Components
 
-| Layer | Components | Purpose |
-|-------|------------|---------|
-| **Edge** | Global HTTP(S) Load Balancer, Cloud CDN, Cloud Armor | Traffic management, caching, and WAF protection |
-| **Compute** | Cloud Run (Frontend & Backend) | Serverless container hosting in private subnet |
-| **Data** | Cloud SQL (PostgreSQL 15) | Private database in peered Google-managed network |
-| **Bridge** | Serverless VPC Access Connector | Connects Cloud Run to VPC resources (`/28` CIDR) |
+| Layer       | Components                                          | Purpose                                           |
+|-------------|-----------------------------------------------------|---------------------------------------------------|
+| **Edge**    | Global HTTP(S) Load Balancer, Cloud CDN, Cloud Armor | Traffic management, caching, and WAF protection  |
+| **Compute** | Cloud Run (Frontend & Backend)                      | Serverless container hosting in private subnet   |
+| **Data**    | Cloud SQL (PostgreSQL 15)                           | Private database in peered Google-managed network |
+| **Bridge**  | Serverless VPC Access Connector                     | Connects Cloud Run to VPC resources (`/28` CIDR) |
 
 ### Network Flow
 
@@ -46,24 +46,24 @@ A modular Terraform configuration that automates the deployment of:
 
 ## Impact Metrics
 
-| Metric | Result |
-|--------|--------|
-| **Security** | Reduced network attack surface by **100%** for internal resources by utilizing Private Service Access and removing all external IP addresses |
-| **Performance** | Optimized asset delivery for the Kenyan market by implementing Cloud CDN, reducing latency for static content |
-| **Reliability** | Achieved **100% reproducibility** of the environment across Dev/Staging/Prod using Terraform's modular variable-driven design |
+| Metric          | Result                                                                                                                                       |
+|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| **Security**    | Reduced network attack surface by **100%** for internal resources by utilizing Private Service Access and removing all external IP addresses |
+| **Performance** | Optimized asset delivery for the Kenyan market by implementing Cloud CDN, reducing latency for static content                               |
+| **Reliability** | Achieved **100% reproducibility** of the environment across Dev/Staging/Prod using Terraform's modular variable-driven design               |
 
 ---
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| Infrastructure | Terraform |
-| Cloud Provider | Google Cloud Platform (GCP) |
-| Compute | Cloud Run (Serverless Containers) |
-| Database | Cloud SQL (PostgreSQL 15) |
-| Networking | VPC, VPC Peering, Private Service Access |
-| Security | Secret Manager, IAM, Cloud Armor |
+| Category        | Technology                          |
+|-----------------|-------------------------------------|
+| Infrastructure  | Terraform                           |
+| Cloud Provider  | Google Cloud Platform (GCP)         |
+| Compute         | Cloud Run (Serverless Containers)   |
+| Database        | Cloud SQL (PostgreSQL 15)           |
+| Networking      | VPC, VPC Peering, Private Service Access |
+| Security        | Secret Manager, IAM, Cloud Armor    |
 
 ---
 
@@ -92,34 +92,34 @@ merch-ke-infra/
 
 Establishes the foundational networking layer with complete isolation:
 
-| Resource | Description |
-|----------|-------------|
-| `google_compute_network` | Custom VPC with manual subnet creation |
-| `google_compute_subnetwork` | Private compute subnet with Google Private Access |
-| `google_vpc_access_connector` | Bridge for Cloud Run to VPC (2-3 instances) |
-| `google_compute_global_address` | Reserved `/16` IP range for Google services |
-| `google_service_networking_connection` | VPC peering with Google's service producer network |
+| Resource                                 | Description                                        |
+|------------------------------------------|----------------------------------------------------|
+| `google_compute_network`                 | Custom VPC with manual subnet creation             |
+| `google_compute_subnetwork`              | Private compute subnet with Google Private Access  |
+| `google_vpc_access_connector`            | Bridge for Cloud Run to VPC (2-3 instances)        |
+| `google_compute_global_address`          | Reserved `/16` IP range for Google services        |
+| `google_service_networking_connection`   | VPC peering with Google's service producer network |
 
 ### Database Module
 
 Provisions a fully private PostgreSQL database:
 
-| Resource | Description |
-|----------|-------------|
+| Resource                       | Description                                        |
+|--------------------------------|----------------------------------------------------|
 | `google_sql_database_instance` | PostgreSQL 15, private IP only, no public exposure |
-| `google_sql_database` | Application database within the instance |
+| `google_sql_database`          | Application database within the instance           |
 
 ### IAM Module
 
 Manages identity, access, and secrets with least-privilege principles:
 
-| Resource | Description |
-|----------|-------------|
-| `google_service_account` | Dedicated SA for backend application |
-| `google_project_iam_member` | Cloud SQL Client role for database access |
-| `google_secret_manager_secret` | Secure storage for database credentials |
-| `google_secret_manager_secret_iam_member` | Secret accessor permissions for backend |
-| `google_sql_user` | Application database user with auto-generated password |
+| Resource                                  | Description                                         |
+|-------------------------------------------|-----------------------------------------------------|
+| `google_service_account`                  | Dedicated SA for backend application                |
+| `google_project_iam_member`               | Cloud SQL Client role for database access           |
+| `google_secret_manager_secret`            | Secure storage for database credentials             |
+| `google_secret_manager_secret_iam_member` | Secret accessor permissions for backend             |
+| `google_sql_user`                         | Application database user with auto-generated password |
 
 ---
 
@@ -127,16 +127,16 @@ Manages identity, access, and secrets with least-privilege principles:
 
 ### Required Variables
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `project_id` | string | GCP Project ID |
-| `region` | string | GCP region for resource deployment |
-| `env` | string | Environment name (dev, staging, prod) |
-| `app_name` | string | Application name for resource naming |
-| `vpc_name` | string | Name for the VPC network |
-| `subnet_compute_cidr` | string | CIDR range for compute subnet |
-| `vpc_connector_cidr` | string | CIDR range for VPC Access Connector (`/28` required) |
-| `db_name` | string | Name for Cloud SQL instance and database |
+| Variable              | Type   | Description                                          |
+|-----------------------|--------|------------------------------------------------------|
+| `project_id`          | string | GCP Project ID                                       |
+| `region`              | string | GCP region for resource deployment                   |
+| `env`                 | string | Environment name (dev, staging, prod)                |
+| `app_name`            | string | Application name for resource naming                 |
+| `vpc_name`            | string | Name for the VPC network                             |
+| `subnet_compute_cidr` | string | CIDR range for compute subnet                        |
+| `vpc_connector_cidr`  | string | CIDR range for VPC Access Connector (`/28` required) |
+| `db_name`             | string | Name for Cloud SQL instance and database             |
 
 ### Example Configuration
 
@@ -192,10 +192,10 @@ The following GCP APIs are automatically enabled during deployment:
 
 ## Provider Versions
 
-| Provider | Version |
-|----------|---------|
-| `hashicorp/google` | 7.12.0 |
-| `hashicorp/random` | ~> 3.0 |
+| Provider           | Version |
+|--------------------|--------:|
+| `hashicorp/google` |  7.12.0 |
+| `hashicorp/random` |  ~> 3.0 |
 
 ---
 
