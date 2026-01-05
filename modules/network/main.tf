@@ -12,7 +12,7 @@ resource "google_compute_subnetwork" "subnet_compute" {
 }
 
 resource "google_vpc_access_connector" "connector" {
-  name          = "run-vpc-connector"
+  name          = "run-vpc-connector-v2"
   region        = var.region
   network       = google_compute_network.vpc.name
   ip_cidr_range = var.vpc_connector_cidr
