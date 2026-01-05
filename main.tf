@@ -1,3 +1,13 @@
+resource "google_project_service" "services" {
+  for_each = toset([
+    "secretmanager.googleapis.com",
+    "run.googleapis.com",
+    "vpcaccess.googleapis.com"
+  ])
+  service            = each.key
+  disable_on_destroy = false
+}
+
 module "network" {
   source              = "./modules/network"
   project_id          = var.project_id
@@ -23,4 +33,5 @@ module "iam" {
   project_id = var.project_id
   app_name   = var.app_name
   env        = var.env
+  db_instance_name = module.database.db_instance_name 
 }

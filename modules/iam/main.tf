@@ -23,3 +23,20 @@ resource "google_secret_manager_secret_iam_member" "secret_reader" {
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.backend_sa.email}"
 }
+
+resource "random_password" "db_pass" {
+  length           = 16
+  special          = true
+  override_special = "_%@"
+}
+
+resource "google_secret_manager_secret_version" "db_password_val" {
+  secret      = google_secret_manager_secret.db_password.id
+  secret_data = random_password.db_pass.result
+}
+
+resource "google_sql_user" "db_user" {
+  name     = "app_user"
+  instance = var.db_instance_name # We'll need to pass this in!
+  password = random_password.db_pass.result
+}
