@@ -19,3 +19,19 @@ resource "google_vpc_access_connector" "connector" {
   min_instances = 2
   max_instances = 3
 }
+
+# Reserve a range of internal IPs for Google services
+resource "google_compute_global_address" "private-ip_alloc" {
+  name          = "google-managed-services-range"
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  prefix_length = 16
+  network       = google_compute_network.vpc.id
+}
+
+# Establish the private connection
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.vpc.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private-ip_alloc.name]
+}

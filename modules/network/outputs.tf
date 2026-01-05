@@ -17,3 +17,7 @@ output "subnet_id" {
   value       = google_compute_subnetwork.subnet_compute.id
   description = "The ID of the compute subnet"
 }
+
+output "network_id" {
+  value = google_compute_network.vpc.id
+}
