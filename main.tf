@@ -17,3 +17,10 @@ module "database" {
   # CRITICAL: The DB cannot be created until the Network Tunnel is finished!
   depends_on = [module.network]
 }
+
+module "iam" {
+  source     = "./modules/iam"
+  project_id = var.project_id
+  app_name   = var.app_name
+  env        = var.env
+}
