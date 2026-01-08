@@ -76,14 +76,25 @@ merch-ke-infra/
 ├── outputs.tf              # Infrastructure output values
 ├── provider.tf             # GCP Provider configuration
 ├── terraform.tfvars        # Environment-specific values (git ignored)
+├── docs/
+│   ├── ARCHITECTURE.md     # Detailed technical architecture
+│   └── OPERATIONS.md       # Quick reference for common commands
 └── modules/
     ├── network/            # VPC, Subnets, VPC Connector, Private Service Access
     ├── database/           # Private Cloud SQL PostgreSQL instance
     ├── iam/                # Service Accounts, IAM roles, Secret Manager
     ├── compute/            # Cloud Run services (Frontend & Backend)
     ├── loadbalancer/       # Global HTTP(S) Load Balancer with URL routing
-    └── security/           # Cloud Armor & Firewall rules
+    └── security/           # Cloud Armor & WAF policies (optional)
 ```
+
+### Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [README.md](README.md) | Project overview and getting started |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive technical architecture |
+| [docs/OPERATIONS.md](docs/OPERATIONS.md) | Quick reference commands |
 
 ---
 
@@ -252,6 +263,50 @@ Then update `terraform.tfvars` with the image URIs and run `terraform apply`.
 
 ---
 
+## Current Deployment
+
+The infrastructure is deployed with the following resources:
+
+| Resource | Value |
+|----------|-------|
+| **Load Balancer IP** | `35.227.202.77` |
+| **Database Private IP** | `10.95.0.3` |
+| **VPC Connector** | `10.8.0.0/28` |
+| **Compute Subnet** | `10.0.1.0/24` |
+
+### Access Points
+
+- **Frontend:** http://35.227.202.77
+- **Backend API:** http://35.227.202.77/api/*
+- **Cloud Console:** [GCP Console](https://console.cloud.google.com/home/dashboard?project=musicstudy-ke)
+
+---
+
+## Database Migration
+
+The Cloud SQL instance has **private IP only**. To run migrations:
+
+### Option 1: Cloud SQL Studio (Recommended)
+
+1. Go to **SQL** → **merch-ke-db** in Cloud Console
+2. Click **Cloud SQL Studio** in the left sidebar
+3. Login with:
+   - **Database:** `merch-ke-db`
+   - **User:** `app_user`
+   - **Password:** Get from **Secret Manager** → `merch-ke-db-app-password-dev`
+4. Paste and execute the schema from `merch-ke-api/database/schema.sql`
+
+### Option 2: Cloud Shell
+
+```bash
+# From Cloud Shell (has VPC connectivity)
+gcloud sql connect merch-ke-db --database=merch-ke-db --user=app_user
+# Enter password from Secret Manager when prompted
+# Then paste your SQL schema
+```
+
+---
+
 ## Lessons Learned
 
 - **CIDR Management:** Non-overlapping IP ranges are critical. Serverless VPC Connectors specifically require a `/28` block that doesn't conflict with other subnets.
@@ -261,4 +316,108 @@ Then update `terraform.tfvars` with the image URIs and run `terraform apply`.
 - **Private Service Access:** The database module must explicitly depend on the network module to ensure the peering connection is established before Cloud SQL attempts to use it.
 
 - **Secrets Lifecycle:** Auto-generating database passwords with Terraform's `random_password` resource and storing them in Secret Manager eliminates manual credential management.
+
+- **Cloud Run Ingress:** Setting ingress to `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER` ensures services are only accessible via the Load Balancer, not directly via their Cloud Run URLs.
+
+- **URL Routing:** The Load Balancer URL map routes `/api/*` to backend and `/*` to frontend. The path is passed as-is to the backend (not stripped).
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**1. Terraform apply interrupted**
+
+If `terraform apply` is interrupted, resources may exist in GCP but not in state:
+
+```bash
+# Import orphaned resources
+terraform import 'module.loadbalancer.google_compute_global_address.default' projects/PROJECT_ID/global/addresses/ADDRESS_NAME
+
+# Then re-run
+terraform apply
+```
+
+**2. Cloud Run returns 403 Forbidden**
+
+Cloud Run services are restricted to Load Balancer access. Always use the Load Balancer IP, not the Cloud Run URL directly.
+
+**3. Database connection errors**
+
+- Verify VPC Connector is healthy: `gcloud compute networks vpc-access connectors describe CONNECTOR_NAME --region=REGION`
+- Check Cloud SQL is running: `gcloud sql instances describe INSTANCE_NAME`
+- Verify service account has `roles/cloudsql.client` role
+
+**4. 500 errors on API endpoints**
+
+Check Cloud Run logs:
+```bash
+gcloud run services logs read SERVICE_NAME --region=REGION --limit=50
+```
+
+---
+
+## Updating Container Images
+
+To deploy new versions of the application:
+
+```bash
+# 1. Build and push new image
+cd ../merch-ke
+gcloud builds submit --tag us-central1-docker.pkg.dev/musicstudy-ke/merch-repo/merch-ke-frontend:latest .
+
+# 2. Update Cloud Run service
+gcloud run services update merch-ke-frontend-dev \
+  --region=us-central1 \
+  --image=us-central1-docker.pkg.dev/musicstudy-ke/merch-repo/merch-ke-frontend:latest
+
+# Or use terraform apply if image URIs changed in terraform.tfvars
+```
+
+---
+
+## Security Considerations
+
+### Current Security Posture
+
+| Layer | Protection |
+|-------|------------|
+| Network | Private VPC, no public IPs on internal resources |
+| Database | Private IP only, VPC peering, encrypted at rest |
+| Secrets | Secret Manager with IAM-based access control |
+| Compute | Service accounts with least-privilege IAM |
+| Ingress | Cloud Run restricted to Load Balancer only |
+
+### Future Enhancements (Optional)
+
+Enable Cloud Armor in `modules/security/main.tf` for:
+- DDoS protection
+- WAF rules (SQL injection, XSS blocking)
+- Rate limiting
+- Geo-blocking
+
+---
+
+## Cost Optimization
+
+| Resource | Billing Model | Optimization |
+|----------|---------------|--------------|
+| Cloud Run | Per request + CPU/memory | Scale to zero when idle |
+| Cloud SQL | Hourly + storage | Use `db-f1-micro` for dev |
+| Load Balancer | Per rule + traffic | Single LB for all services |
+| VPC Connector | Per instance (2-3) | Min instances = 2 |
+
+**Estimated monthly cost (dev):** ~$50-100 USD
+
+---
+
+## Future Roadmap
+
+- [ ] HTTPS with managed SSL certificate (requires custom domain)
+- [ ] Cloud CDN for static asset caching
+- [ ] Cloud Armor WAF policies
+- [ ] Cloud Monitoring dashboards and alerts
+- [ ] Staging and Production environments
+- [ ] CI/CD with Cloud Build triggers
 
