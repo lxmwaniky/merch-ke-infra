@@ -37,3 +37,15 @@ variable "db_name" {
   type        = string
   description = "The name of the database."
 }
+
+variable "frontend_image" {
+  type        = string
+  description = "The container image URI for the frontend service."
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "backend_image" {
+  type        = string
+  description = "The container image URI for the backend service."
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}

@@ -48,7 +48,10 @@ module "compute" {
   db_host               = module.database.db_instance_ip
   db_name               = var.db_name
   db_password_secret_id = module.iam.db_password_secret_id
-  depends_on            = [module.iam, module.database, module.network]
+  frontend_image        = var.frontend_image
+  backend_image         = var.backend_image
+
+  depends_on = [module.iam, module.database, module.network]
 }
 
 module "loadbalancer" {

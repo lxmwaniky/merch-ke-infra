@@ -80,7 +80,8 @@ merch-ke-infra/
     ├── network/            # VPC, Subnets, VPC Connector, Private Service Access
     ├── database/           # Private Cloud SQL PostgreSQL instance
     ├── iam/                # Service Accounts, IAM roles, Secret Manager
-    ├── compute/            # Cloud Run services
+    ├── compute/            # Cloud Run services (Frontend & Backend)
+    ├── loadbalancer/       # Global HTTP(S) Load Balancer with URL routing
     └── security/           # Cloud Armor & Firewall rules
 ```
 
@@ -121,6 +122,33 @@ Manages identity, access, and secrets with least-privilege principles:
 | `google_secret_manager_secret_iam_member` | Secret accessor permissions for backend             |
 | `google_sql_user`                         | Application database user with auto-generated password |
 
+### Compute Module
+
+Deploys Cloud Run services with VPC connectivity:
+
+| Resource                              | Description                                              |
+|---------------------------------------|----------------------------------------------------------|
+| `google_cloud_run_v2_service`         | Frontend (Next.js) and Backend (Go API) services         |
+| `google_cloud_run_v2_service_iam_member` | IAM bindings for Load Balancer invocation             |
+
+Key configurations:
+- Ingress restricted to internal + Load Balancer only
+- VPC Access Connector for private database connectivity
+- Environment variables for DB connection (password from Secret Manager)
+
+### Load Balancer Module
+
+Exposes services via a Global HTTP(S) Load Balancer:
+
+| Resource                                  | Description                                        |
+|-------------------------------------------|----------------------------------------------------|
+| `google_compute_global_address`           | Static public IP for the load balancer             |
+| `google_compute_region_network_endpoint_group` | Serverless NEGs for Cloud Run services        |
+| `google_compute_backend_service`          | Backend configurations for frontend and API        |
+| `google_compute_url_map`                  | URL routing (`/*` → Frontend, `/api/*` → Backend)  |
+| `google_compute_target_http_proxy`        | HTTP proxy for URL map                             |
+| `google_compute_global_forwarding_rule`   | Forwards traffic on port 80 (and 443 with domain)  |
+
 ---
 
 ## Configuration
@@ -137,6 +165,8 @@ Manages identity, access, and secrets with least-privilege principles:
 | `subnet_compute_cidr` | string | CIDR range for compute subnet                        |
 | `vpc_connector_cidr`  | string | CIDR range for VPC Access Connector (`/28` required) |
 | `db_name`             | string | Name for Cloud SQL instance and database             |
+| `frontend_image`      | string | Container image URI for frontend (default: placeholder) |
+| `backend_image`       | string | Container image URI for backend (default: placeholder)  |
 
 ### Example Configuration
 
@@ -149,7 +179,11 @@ vpc_name            = "merch-ke-vpc"
 subnet_compute_cidr = "10.0.1.0/24"
 vpc_connector_cidr  = "10.8.0.0/28"
 db_name             = "merch-ke-db"
+frontend_image      = "us-central1-docker.pkg.dev/your-project/repo/frontend:latest"
+backend_image       = "us-central1-docker.pkg.dev/your-project/repo/backend:latest"
 ```
+
+**Note:** Container images are stored in `terraform.tfvars` (git-ignored) to avoid hardcoding environment-specific URIs in version control. Use placeholder defaults during development.
 
 ---
 
@@ -187,6 +221,25 @@ The following GCP APIs are automatically enabled during deployment:
 - `secretmanager.googleapis.com` - Secrets management
 - `run.googleapis.com` - Cloud Run services
 - `vpcaccess.googleapis.com` - VPC Access Connector
+- `compute.googleapis.com` - Load Balancer and networking
+
+---
+
+## Container Image Deployment
+
+This infrastructure references container images as variables. Build and push images before applying:
+
+```bash
+# Build and push backend (Go API)
+cd ../merch-ke-api
+gcloud builds submit --tag us-central1-docker.pkg.dev/PROJECT_ID/REPO/merch-ke-api:latest .
+
+# Build and push frontend (Next.js)
+cd ../merch-ke
+gcloud builds submit --tag us-central1-docker.pkg.dev/PROJECT_ID/REPO/merch-ke-frontend:latest .
+```
+
+Then update `terraform.tfvars` with the image URIs and run `terraform apply`.
 
 ---
 
