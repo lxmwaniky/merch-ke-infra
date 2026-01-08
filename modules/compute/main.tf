@@ -1,6 +1,3 @@
-# -----------------------------------------------------------------------------
-# Frontend Cloud Run Service
-# -----------------------------------------------------------------------------
 resource "google_cloud_run_v2_service" "frontend" {
   name     = "${var.app_name}-frontend-${var.env}"
   location = var.region
@@ -44,9 +41,6 @@ resource "google_cloud_run_v2_service" "frontend" {
   depends_on = [var.vpc_connector_id]
 }
 
-# -----------------------------------------------------------------------------
-# Backend Cloud Run Service
-# -----------------------------------------------------------------------------
 resource "google_cloud_run_v2_service" "backend" {
   name     = "${var.app_name}-backend-${var.env}"
   location = var.region
@@ -73,7 +67,6 @@ resource "google_cloud_run_v2_service" "backend" {
         container_port = 8080
       }
 
-      # Database connection environment variables
       env {
         name  = "DB_HOST"
         value = var.db_host
@@ -116,9 +109,6 @@ resource "google_cloud_run_v2_service" "backend" {
   depends_on = [var.vpc_connector_id]
 }
 
-# -----------------------------------------------------------------------------
-# IAM - Allow Load Balancer to invoke services (no public access)
-# -----------------------------------------------------------------------------
 resource "google_cloud_run_v2_service_iam_member" "frontend_invoker" {
   project  = var.project_id
   location = var.region

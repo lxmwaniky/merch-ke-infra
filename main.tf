@@ -2,7 +2,8 @@ resource "google_project_service" "services" {
   for_each = toset([
     "secretmanager.googleapis.com",
     "run.googleapis.com",
-    "vpcaccess.googleapis.com"
+    "vpcaccess.googleapis.com",
+    "compute.googleapis.com"
   ])
   service            = each.key
   disable_on_destroy = false
@@ -23,8 +24,6 @@ module "database" {
   region     = var.region
   db_name    = var.db_name
   network_id = module.network.network_id
-
-  # CRITICAL: The DB cannot be created until the Network Tunnel is finished!
   depends_on = [module.network]
 }
 
@@ -49,10 +48,18 @@ module "compute" {
   db_host               = module.database.db_instance_ip
   db_name               = var.db_name
   db_password_secret_id = module.iam.db_password_secret_id
+  depends_on            = [module.iam, module.database, module.network]
+}
 
-  # Optional: Override default placeholder images
-  # frontend_image = "us-central1-docker.pkg.dev/your-project/repo/frontend:latest"
-  # backend_image  = "us-central1-docker.pkg.dev/your-project/repo/backend:latest"
+module "loadbalancer" {
+  source = "./modules/loadbalancer"
 
-  depends_on = [module.iam, module.database, module.network]
+  project_id            = var.project_id
+  region                = var.region
+  app_name              = var.app_name
+  env                   = var.env
+  frontend_service_name = module.compute.frontend_service_name
+  backend_service_name  = module.compute.backend_service_name
+
+  depends_on = [module.compute]
 }
